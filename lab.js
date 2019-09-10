@@ -20,12 +20,10 @@ app.use(express.static('css'));
 MongoDBClient.connect(url, {useNewUrlParser:true, useUnifiedTopology:true}, function(err,client){
     //MongoDBClient.connect(url, function(err,client))
     //userNewURLParser and useUnifiedTopology are used to remove the error  
-    db = client.db('To-Do');
+    db = client.db('To-Do2');
     //name for the database
-    col = db.collection('Tasks');
+    col = db.collection('Tasks2');
     //databse table
-    
-    // col.insertOne({maker:'BMW', year:'1998'});
 });
 
 
@@ -38,7 +36,7 @@ app.use(bodyParser.urlencoded({extended:false}));
 app.post('/newtask', function(req,res){
     //If the request arrive, we need to execute the same callback /newCarRequest
     let theId = getnewRandomId();
-    let myTaskObjs = {taskid:theId, taskname:req.body.taskname, assignto:req.body.assignto, duedate:parseInt(req.body.duedate), taskstatus:req.body.taskstatus, taskdesc:req.body.taskdesc};
+    let myTaskObjs = {taskid:theId, taskname:req.body.taskname, assignto:req.body.assignto, duedate:new Date(req.body.duedate), taskstatus:req.body.taskstatus, taskdesc:req.body.taskdesc};
     // col.insertOne(req.body);
     col.insertOne(myTaskObjs);
     res.redirect('/listtasks');
@@ -54,7 +52,14 @@ function getnewRandomId(){
 
 app.get('/listtasks', function (req, res) {
     col.find({}).toArray(function (err, data) {
+        //The find() method returns all occurrences in the selection.
+        data.forEach(element=>{
+            let date = element['duedate'].toString().split(' ');
+            let final_date = date[3]+'-'+date[1]+'-'+date[2]
+            element['duedate']=final_date;
+        });
         res.render('listtasks', { task: data });
+        //task relates back to the task loop from /task
     });
 });
 
@@ -73,6 +78,18 @@ app.get('/deletecomplete', function (req,res){
     col.deleteMany({taskstatus:'complete'}, function(err,obj){
         console.log(obj.result);
         res.redirect('/listtasks');
+    });
+});
+
+app.get('/deleteOldComplete', function (req,res){
+    // myDate = new Date("2019-09-04T16:00:00Z");
+    var today = new Date();
+    var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+    var d2 = new Date(date);
+
+    col.deleteMany({taskstatus:'complete', duedate:{$lte:d2}}, function(err,obj){
+    console.log(obj.result);
+    res.redirect('/listtasks');
     });
 });
 
@@ -101,3 +118,6 @@ app.get('/updatetasks', function(req,res){
 
 app.listen(8080);
 
+//how to install mongodb in vm:
+//sudo 
+//apt install -y mongodb
